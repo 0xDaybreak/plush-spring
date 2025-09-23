@@ -3,10 +3,8 @@ package com.codingday.plushspring;
 import com.codingday.plushspring.entity.Plush;
 import com.codingday.plushspring.model.BuyRequest;
 import com.codingday.plushspring.repository.PlushRepository;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import jakarta.transaction.Transactional;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -43,12 +41,23 @@ public class PlushController {
     }
 
     @PostMapping("/buy-heavy")
+    @Transactional
     public String buyHeavy(@RequestBody BuyRequest req) {
+
         Plush plush = plushRepo.findById(req.getId())
                 .orElseThrow();
+        List<Plush> allPlushies = plushRepo.findAll();
         ourPlushies.add(plush);
         System.out.println("OUR PLUSHIES: " + ourPlushies);
         return "Bought " + req.getQuantity() + " plushes " + plush.getName();
+    }
+
+    @GetMapping("/test-heap")
+    public void test()  {
+        List<byte[]> leak = new ArrayList<>();
+        while(true) {
+            leak.add(new byte[1024*1024]);
+        }
     }
 
 }

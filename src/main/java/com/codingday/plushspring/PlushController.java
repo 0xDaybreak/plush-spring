@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ public class PlushController {
 
     private final PlushRepository plushRepo;
     private final List<Plush> ourPlushies = new ArrayList<>();
+    private final Map<Long, Plush> memoryHog = new HashMap<>();
 
     public PlushController(PlushRepository plushRepo) {
         this.plushRepo = plushRepo;
@@ -47,7 +49,16 @@ public class PlushController {
         Plush plush = plushRepo.findById(req.getId())
                 .orElseThrow();
         List<Plush> allPlushies = plushRepo.findAll();
-        ourPlushies.add(plush);
+
+        ourPlushies.addAll(allPlushies);
+        ourPlushies.forEach(p-> p.setPrice(p.getPrice().multiply(BigDecimal.valueOf(0.01))));
+        ourPlushies.forEach(p -> memoryHog.put(p.getId(), p));
+
+        for (int i = 0; i < 10000; i++) {
+            Plush p = new Plush();
+            memoryHog.put(System.nanoTime(), p);
+        }
+
         System.out.println("OUR PLUSHIES: " + ourPlushies);
         return "Bought " + req.getQuantity() + " plushes " + plush.getName();
     }

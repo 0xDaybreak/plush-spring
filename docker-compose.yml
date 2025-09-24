@@ -5,7 +5,7 @@ services:
     container_name: plushdb
     restart: always
     environment:
-      POSTGRES_USER: plushuser
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: a
       POSTGRES_DB: plush
     ports:

@@ -30,7 +30,6 @@ COPY --from=builder /app/target/plush-spring-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 
 # Add JVM options for memory tuning (you can override in k8s later)
-ENV JAVA_OPTS="-Xms128m -Xmx128m"
+ENV JAVA_OPTS="-Xms128m -Xmx128m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/heapdump.hprof"
 
-# Run the Spring Boot app
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

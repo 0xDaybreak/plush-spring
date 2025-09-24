@@ -1,12 +1,11 @@
 version: '3.9'
-
 services:
   postgres:
     image: postgres:16
     container_name: plushdb
     restart: always
     environment:
-      POSTGRES_USER: postgres
+      POSTGRES_USER: plushuser
       POSTGRES_PASSWORD: a
       POSTGRES_DB: plush
     ports:
@@ -14,5 +13,20 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  plush-spring:
+    build: .
+    container_name: plush-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/plush
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: a
+    depends_on:
+      - postgres
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 volumes:
   postgres_data:

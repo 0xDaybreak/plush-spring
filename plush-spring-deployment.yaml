@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: plush-spring-service
+spec:
+  selector:
+    app: plush-spring
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: NodePort   # You can also use ClusterIP or LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plush-spring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: plush-spring
+  template:
+    metadata:
+      labels:
+        app: plush-spring
+    spec:
+      containers:
+        - name: plush-spring
+          image: plush-spring:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-service:5432/plush
+            - name: SPRING_DATASOURCE_USERNAME
+              value: plushuser
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: a
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+            requests:
+              memory: "64Mi"
+              cpu: "250m"

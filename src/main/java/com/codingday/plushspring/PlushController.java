@@ -15,7 +15,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -27,48 +26,45 @@ public class PlushController {
     private final PlushRepository plushRepository;
 
     @PostMapping("/buy-heavy")
-    @Transactional
-    public String buyHeavy(@RequestBody List<BuyRequest> requests) {
-        if (requests.isEmpty()) {
-            return "No orders sent";
-        }
+    public String buyHeavy(@RequestBody BuyRequest req) {
 
-        Long customerId = requests.get(0).getCustomerId();
+
+        Long customerId = req.getCustomerId();
 
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         List<Plush> allPlushes = plushRepository.findAll();
 
-        for (BuyRequest req : requests) {
-            List<Plush> plushesForOrder = allPlushes.stream()
-                    .filter(p -> req.getPlushIds().contains(p.getId().toString()))
-                    .toList();
+        List<Plush> plushesForOrder = allPlushes.stream()
+                .filter(p -> req.getPlushIds().contains(p.getId().toString()))
+                .toList();
 
-            if (plushesForOrder.isEmpty()) continue;
 
-            Order order = new Order();
-            order.setCustomer(customer);
-            order.setPlushies(plushesForOrder);
-            order.setTotalAmount(plushesForOrder.stream()
-                    .map(p -> p.getPrice())
-                    .reduce(BigDecimal.ZERO, BigDecimal::add));
-            order.setOrderDate(LocalDateTime.now());
+        Order order = new Order();
+        order.setCustomer(customer);
+        order.setPlushies(plushesForOrder);
+        order.setTotalAmount(plushesForOrder.stream()
+                .map(p -> p.getPrice())
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+        order.setOrderDate(LocalDateTime.now());
 
-            LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
-            boolean hasRecentOrders = orderRepository.findByCustomerIdAndOrderDateAfter(customerId, sixMonthsAgo)
-                    .size() > 0;
+        LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+        boolean hasRecentOrders = orderRepository.findByCustomerIdAndOrderDateAfter(customerId, sixMonthsAgo)
+                .size() > 0;
 
-            if (hasRecentOrders) {
-                BigDecimal discount = order.getTotalAmount().multiply(BigDecimal.valueOf(0.1));
-                order.setTotalAmount(order.getTotalAmount().subtract(discount));
-            }
-
-            orderRepository.save(order);
+        if (hasRecentOrders) {
+            BigDecimal discount = order.getTotalAmount().multiply(BigDecimal.valueOf(0.1));
+            order.setTotalAmount(order.getTotalAmount().subtract(discount));
         }
 
-        return "Processed " + requests.size() + " orders";
+        orderRepository.save(order);
+        String res = "Processed " + req + " order";
+        System.out.println(res);
+
+        return res;
     }
+
     @GetMapping("/test-heap")
     public void test() {
         List<byte[]> leak = new ArrayList<>();

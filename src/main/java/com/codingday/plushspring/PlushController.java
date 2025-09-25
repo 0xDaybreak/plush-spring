@@ -1,73 +1,79 @@
 package com.codingday.plushspring;
 
+import com.codingday.plushspring.entity.Customer;
+import com.codingday.plushspring.entity.Order;
 import com.codingday.plushspring.entity.Plush;
 import com.codingday.plushspring.model.BuyRequest;
+import com.codingday.plushspring.repository.CustomerRepository;
+import com.codingday.plushspring.repository.OrderRepository;
 import com.codingday.plushspring.repository.PlushRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class PlushController {
 
-    private final PlushRepository plushRepo;
-    private final List<Plush> ourPlushies = new ArrayList<>();
-    private final Map<Long, Plush> memoryHog = new HashMap<>();
-
-    public PlushController(PlushRepository plushRepo) {
-        this.plushRepo = plushRepo;
-    }
-
-    @PostMapping("/buy")
-    public Map<String, Object> buyPlush(@RequestBody BuyRequest req) {
-
-        Plush plush = plushRepo.findById(req.getId()).orElseThrow(() -> new RuntimeException("Plush not found"));
-
-        if (plush.getQuantity().compareTo(req.getQuantity()) < 0) {
-            throw new RuntimeException("Insufficient quantity to make purchase");
-        }
-        BigDecimal remainingStock = plush.getQuantity().subtract(req.getQuantity());
-        plush.setQuantity(remainingStock);
-
-        BigDecimal totalPrice = req.getQuantity().multiply(plush.getPrice());
-        plushRepo.save(plush);
-
-        return Map.of("id", req.getId(), "name", plush.getName(), "totalPrice", totalPrice, "remainingStock", remainingStock);
-
-    }
+    private final CustomerRepository customerRepository;
+    private final OrderRepository orderRepository;
+    private final PlushRepository plushRepository;
 
     @PostMapping("/buy-heavy")
     @Transactional
-    public String buyHeavy(@RequestBody BuyRequest req) {
-
-        Plush plush = plushRepo.findById(req.getId())
-                .orElseThrow();
-        List<Plush> allPlushies = plushRepo.findAll();
-
-        ourPlushies.addAll(allPlushies);
-        ourPlushies.forEach(p-> p.setPrice(p.getPrice().multiply(BigDecimal.valueOf(0.01))));
-        ourPlushies.forEach(p -> memoryHog.put(p.getId(), p));
-
-        for (int i = 0; i < 10000; i++) {
-            Plush p = new Plush();
-            memoryHog.put(System.nanoTime(), p);
+    public String buyHeavy(@RequestBody List<BuyRequest> requests) {
+        if (requests.isEmpty()) {
+            return "No orders sent";
         }
 
-        System.out.println("OUR PLUSHIES: " + ourPlushies);
-        return "Bought " + req.getQuantity() + " plushes " + plush.getName();
-    }
+        Long customerId = requests.get(0).getCustomerId();
 
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        List<Plush> allPlushes = plushRepository.findAll();
+
+        for (BuyRequest req : requests) {
+            List<Plush> plushesForOrder = allPlushes.stream()
+                    .filter(p -> req.getPlushIds().contains(p.getId().toString()))
+                    .toList();
+
+            if (plushesForOrder.isEmpty()) continue;
+
+            Order order = new Order();
+            order.setCustomer(customer);
+            order.setPlushies(plushesForOrder);
+            order.setTotalAmount(plushesForOrder.stream()
+                    .map(p -> p.getPrice())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add));
+            order.setOrderDate(LocalDateTime.now());
+
+            LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
+            boolean hasRecentOrders = orderRepository.findByCustomerIdAndOrderDateAfter(customerId, sixMonthsAgo)
+                    .size() > 0;
+
+            if (hasRecentOrders) {
+                BigDecimal discount = order.getTotalAmount().multiply(BigDecimal.valueOf(0.1));
+                order.setTotalAmount(order.getTotalAmount().subtract(discount));
+            }
+
+            orderRepository.save(order);
+        }
+
+        return "Processed " + requests.size() + " orders";
+    }
     @GetMapping("/test-heap")
-    public void test()  {
+    public void test() {
         List<byte[]> leak = new ArrayList<>();
-        while(true) {
-            leak.add(new byte[1024*1024]);
+        while (true) {
+            leak.add(new byte[1024 * 1024]);
         }
     }
 

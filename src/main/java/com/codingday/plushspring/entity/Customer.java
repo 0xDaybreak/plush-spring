@@ -4,18 +4,21 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
-import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
-@Table(name = "plushies")
+@Table(name = "customer")
 @Data
 @RequiredArgsConstructor
-public class Plush {
+public class Customer {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String name;
-    private BigDecimal price;
+    private String password;
+
+    @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL)
+    private List<Order> orders;
 }

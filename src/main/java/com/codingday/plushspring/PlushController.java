@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +25,7 @@ public class PlushController {
     private final OrderRepository orderRepository;
     private final PlushRepository plushRepository;
 
-    private static Map<Long, Order> cache = new HashMap<>();
+    private static final Map<Long, BuyRequest> cache = new HashMap<>();
 
     @PostMapping("/buy-heavy")
     public String buyHeavy(@RequestBody List<BuyRequest> reqs) {
@@ -40,6 +39,7 @@ public class PlushController {
         List<Plush> allPlushes = plushRepository.findAll();
 
         for (BuyRequest req : reqs) {
+
             List<Plush> plushesForOrder = allPlushes.stream()
                     .filter(p -> req.getPlushIds().contains(p.getId().toString()))
                     .toList();
@@ -49,7 +49,7 @@ public class PlushController {
             order.setCustomer(customer);
             order.setPlushies(plushesForOrder);
             order.setTotalAmount(plushesForOrder.stream()
-                    .map(p -> p.getPrice())
+                    .map(Plush::getPrice)
                     .reduce(BigDecimal.ZERO, BigDecimal::add));
             order.setOrderDate(LocalDateTime.now());
 
@@ -64,20 +64,12 @@ public class PlushController {
 
 
             orderRepository.save(order);
-            cache.put(order.getId(), order);
+            cache.put(System.nanoTime(), req);
         }
         String res = "Processed " + reqs.size() + " order";
         System.out.println(res);
 
         return res;
-    }
-
-    @GetMapping("/test-heap")
-    public void test() {
-        List<byte[]> leak = new ArrayList<>();
-        while (true) {
-            leak.add(new byte[1024 * 1024]);
-        }
     }
 
 }

@@ -13,9 +13,16 @@ public class BuyRequest {
     private Long customerId;
     private List<String> plushIds;
 
+    private String payload;
 
-    public BuyRequest(Long customerId, List<String> plushIds) {
+
+    public BuyRequest() {
+
+    }
+
+    public BuyRequest(Long customerId, List<String> plushIds, String payload) {
         this.customerId = customerId;
         this.plushIds = plushIds;
+        this.payload = payload;
     }
 }

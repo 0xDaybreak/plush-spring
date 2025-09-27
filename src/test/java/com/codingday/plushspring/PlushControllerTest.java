@@ -11,8 +11,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -126,4 +128,32 @@ class PlushControllerTest {
 
         assertEquals("Customer not found", ex.getMessage());
     }
+
+    @Test
+    void testCacheIsUsed() throws Exception {
+        Customer customer = new Customer();
+        customer.setId(1L);
+        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+
+        Plush plush = new Plush();
+        plush.setId(100L);
+        plush.setPrice(BigDecimal.valueOf(50));
+        when(plushRepository.findAll()).thenReturn(List.of(plush));
+        when(orderRepository.findByCustomerIdAndOrderDateAfter(eq(1L), any()))
+                .thenReturn(List.of());
+
+        BuyRequest request = new BuyRequest();
+        request.setCustomerId(1L);
+        request.setPlushIds(List.of("100"));
+
+        plushController.buyHeavy(List.of(request));
+
+        Field cacheField = PlushController.class.getDeclaredField("cache");
+        cacheField.setAccessible(true);
+        Map<Long, BuyRequest> cache = (Map<Long, BuyRequest>) cacheField.get(null);
+
+        assertFalse(cache.isEmpty(), "Cache should not be empty");
+        assertTrue(cache.containsValue(request), "Cache should contain the request");
+    }
+
 }

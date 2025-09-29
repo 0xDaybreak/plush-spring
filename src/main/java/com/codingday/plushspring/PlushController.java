@@ -31,45 +31,6 @@ public class PlushController {
     public String buyHeavy(@RequestBody List<BuyRequest> reqs) {
 
 
-        Long customerId = reqs.get(0).getCustomerId();
-
-        Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
-
-        List<Plush> allPlushes = plushRepository.findAll();
-
-        for (BuyRequest req : reqs) {
-
-            List<Plush> plushesForOrder = allPlushes.stream()
-                    .filter(p -> req.getPlushIds().contains(p.getId().toString()))
-                    .toList();
-
-
-            Order order = new Order();
-            order.setCustomer(customer);
-            order.setPlushies(plushesForOrder);
-            order.setTotalAmount(plushesForOrder.stream()
-                    .map(Plush::getPrice)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add));
-            order.setOrderDate(LocalDateTime.now());
-
-            LocalDateTime sixMonthsAgo = LocalDateTime.now().minusMonths(6);
-            boolean hasRecentOrders = orderRepository.findByCustomerIdAndOrderDateAfter(customerId, sixMonthsAgo)
-                    .size() > 0;
-
-            if (hasRecentOrders) {
-                BigDecimal discount = order.getTotalAmount().multiply(BigDecimal.valueOf(0.1));
-                order.setTotalAmount(order.getTotalAmount().subtract(discount));
-            }
-
-
-            orderRepository.save(order);
-            cache.put(System.nanoTime(), req);
-        }
-        String res = "Processed " + reqs.size() + " order";
-        System.out.println(res);
-
-        return res;
     }
 
 }

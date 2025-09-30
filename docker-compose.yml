@@ -18,6 +18,7 @@ services:
     container_name: plush-app
     ports:
       - "8080:8080"
+      - "9010:9010"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/plush
       SPRING_DATASOURCE_USERNAME: postgres
